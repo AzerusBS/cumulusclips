@@ -61,7 +61,7 @@ if (isset ($_POST['submitted'])) {
     } else {
         $prefix = '';
     }
-    
+
 
     // Execute queries if no form errors were found
     if (empty ($errors)) {
@@ -73,19 +73,14 @@ if (isset ($_POST['submitted'])) {
         try {
 
             // Connect to user's database server
-            $dbc = @mysql_connect ($hostname, $username, $password);
-            if (!$dbc) throw new Exception ("Unable to connect to the database server with the credentials you provided. Please verify they're correct and try again.");
-
-
-            // Select user's database for operation
-            $select = @mysql_select_db ($name, $dbc);
-            if (!$select) throw new Exception ("Unable to use database you specified. Please verify the name is correct and that you have access to it.");
+            $pdo = new PDO('mysql:host=' . $hostname . ';dbname=' . $name, $username, $password, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
+            if (!$pdo) throw new Exception ("Unable to connect to the database server with the credentials you provided, or to use database you specified. Please verify they're correct and try again.");
 
 
             // Perform install queries
             foreach ($install_queries as $query) {
                 $query = str_replace ('{DB_PREFIX}', $prefix, str_replace ("\n", '', ($query)));
-                $result = @mysql_query ($query);
+                $result = $pdo->prepare($query)->execute();
                 if (!$result) throw new Exception ("Unable to execute queries. Please verify you have write access to the database.");
             }
 
@@ -93,14 +88,14 @@ if (isset ($_POST['submitted'])) {
             // Open temp config file and replace placeholders with actual values
             $config_file = INSTALL . '/includes/config.default.php';
             $config_content = @file_get_contents ($config_file);
-            
+
             // DB Values
             $config_content = preg_replace ('/{DB_HOST}/i', $hostname, $config_content);
             $config_content = preg_replace ('/{DB_NAME}/i', $name, $config_content);
             $config_content = preg_replace ('/{DB_USER}/i', $username, $config_content);
             $config_content = preg_replace ('/{DB_PASS}/i', $password, $config_content);
             $config_content = preg_replace ('/{DB_PREFIX}/i', $prefix, $config_content);
-            
+
             // FTP Values
             $config_content = preg_replace ('/{FTP_HOST}/i', $settings->ftp_hostname, $config_content);
             $config_content = preg_replace ('/{FTP_USER}/i', $settings->ftp_username, $config_content);
